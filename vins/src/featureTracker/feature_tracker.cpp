@@ -85,7 +85,7 @@ void FeatureTracker::setMask()
 
 vector<cv::Point2f> FeatureTracker::getTrackedPts()
 {
-    return pts;
+    return cur_pts;
 }
 
 cv::Mat FeatureTracker::getMask()
@@ -130,14 +130,14 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     row = cur_img.rows;
     col = cur_img.cols;
     cv::Mat equ;
-    cv::equalizeHist(img, equ);
+    cv::equalizeHist(cur_img, equ);
     
     // SAM Segmentation update
     frame_count_++;
     if (use_sam_ && sam_client_ != nullptr && (frame_count_ % sam_update_frequency_ == 0))
     {
         cv::Mat color_img, new_sam_mask;
-        cv::cvtColor(img, color_img, cv::COLOR_GRAY2BGR);
+        cv::cvtColor(cur_img, color_img, cv::COLOR_GRAY2BGR);
         if (sam_client_->getSegmentationMask(color_img, new_sam_mask))
             sam_mask = new_sam_mask;
     }
@@ -150,7 +150,6 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         if(!rightImg.empty())
             clahe->apply(rightImg, rightImg);
     }
-    */
     cur_pts.clear();
 
     if (prev_pts.size() > 0)
