@@ -24,7 +24,13 @@ RUN apt-get update && apt-get install -y \
     libeigen3-dev \
     libgoogle-glog-dev \
     libsuitesparse-dev \
+    libboost-python-dev \
+    libboost-dev \
+    libboost-filesystem-dev \
+    libboost-program-options-dev \
     python3-colcon-common-extensions \
+    ros-${ROS_DISTRO}-ament-lint-auto \
+    ros-${ROS_DISTRO}-ament-lint-common \
     ros-${ROS_DISTRO}-image-transport \
     ros-${ROS_DISTRO}-message-filters \
     ros-${ROS_DISTRO}-tf2 \
@@ -58,7 +64,7 @@ COPY . .
 WORKDIR ${COLCON_WS}
 
 RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
-    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF"
     
 WORKDIR /root
 RUN pip3 install \
