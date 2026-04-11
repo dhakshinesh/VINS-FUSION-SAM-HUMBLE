@@ -1,4 +1,4 @@
-FROM dustynv/ros:humble-ros-base-l4t-r36.3.0
+FROM dustynv/ros:humble-desktop-l4t-r36.3.0
 
 ENV CERES_VERSION=2.0.0
 ENV COLCON_WS=/root/colcon_ws
@@ -25,15 +25,9 @@ RUN apt-get update && apt-get install -y \
     libgoogle-glog-dev \
     libsuitesparse-dev \
     python3-colcon-common-extensions \
-    ros-${ROS_DISTRO}-cv-bridge \
-    ros-${ROS_DISTRO}-image-transport \
-    ros-${ROS_DISTRO}-message-filters \
-    ros-${ROS_DISTRO}-tf2 \
-    ros-${ROS_DISTRO}-tf2-ros \
-    ros-${ROS_DISTRO}-tf2-geometry-msgs \
-    ros-${ROS_DISTRO}-rviz2 \
     mesa-utils \
     && rm -rf /var/lib/apt/lists/*
+
 
 RUN git clone https://ceres-solver.googlesource.com/ceres-solver && \
     cd ceres-solver && \
