@@ -143,6 +143,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     }
 
     cv::Mat rightImg = _img1;
+    /*
     if (EQUALIZE)
     {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
@@ -150,6 +151,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
         if(!rightImg.empty())
             clahe->apply(rightImg, rightImg);
     }
+    */
     cur_pts.clear();
 
     if (prev_pts.size() > 0)
