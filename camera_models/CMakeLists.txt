@@ -3,6 +3,7 @@ project(camera_models)
 
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_compile_options(-Wextra -Wpedantic)
 
 
