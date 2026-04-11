@@ -56,10 +56,9 @@ WORKDIR ${COLCON_WS}/src
 RUN git clone -b humble https://github.com/ros-perception/vision_opencv.git
 
 
-# Copy the repository to the container workspace
-RUN mkdir -p ${COLCON_WS}/src/VINS-Fusion-ROS2-humble-arm
-WORKDIR ${COLCON_WS}/src/VINS-Fusion-ROS2-humble-arm
-COPY . .
+# Clone the repository to the container workspace
+WORKDIR ${COLCON_WS}/src
+RUN git clone https://github.com/dhakshinesh/VINS-FUSION-SAM-HUMBLE.git
 
 WORKDIR ${COLCON_WS}
 
@@ -67,20 +66,21 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
     colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF"
     
 WORKDIR /root
-RUN pip3 install \
+RUN pip3 install --index-url https://pypi.org/simple \
     pycocotools \
     matplotlib \
     onnxruntime \
     onnx
-RUN pip3 install --upgrade pip && \
-    pip3 install numpy==1.24.4 && \
+RUN pip3 install --upgrade pip --index-url https://pypi.org/simple && \
+    pip3 install numpy==1.24.4 --index-url https://pypi.org/simple && \
     pip3 install --no-cache-dir \
     torch torchvision \
+    --index-url https://pypi.org/simple \
     --extra-index-url https://jetson-ai-lab.io
 
 #Mobile SAM
-RUN pip3 install timm
-RUN pip3 install git+https://github.com/ChaoningZhang/MobileSAM.git
+RUN pip3 install timm --index-url https://pypi.org/simple
+RUN pip3 install git+https://github.com/ChaoningZhang/MobileSAM.git --index-url https://pypi.org/simple
 RUN mkdir -p segment-anything/checkpoints
 WORKDIR segment-anything/checkpoints
 RUN wget https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt -O /root/segment-anything/checkpoints/mobile_sam.pt
