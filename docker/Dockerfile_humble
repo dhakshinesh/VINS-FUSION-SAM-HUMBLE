@@ -68,7 +68,6 @@ RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
     
 WORKDIR /root
 RUN pip3 install \
-    opencv-python \
     pycocotools \
     matplotlib \
     onnxruntime \
