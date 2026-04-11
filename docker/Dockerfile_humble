@@ -1,0 +1,78 @@
+FROM dustynv/ros:humble-ros-base-l4t-r36.3.0
+
+ENV CERES_VERSION=2.0.0
+ENV COLCON_WS=/root/colcon_ws
+ENV TERM=xterm
+ENV PYTHONIOENCODING=UTF-8
+
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV NVIDIA_DRIVER_CAPABILITIES=all
+
+RUN apt-get update && apt-get install -y \
+    cmake \
+    git \
+    python3-pip \
+    python3-dev \
+    wget \
+    nano \
+    libatlas-base-dev \
+    libeigen3-dev \
+    libgoogle-glog-dev \
+    libsuitesparse-dev \
+    python3-colcon-common-extensions \
+    ros-${ROS_DISTRO}-cv-bridge \
+    ros-${ROS_DISTRO}-image-transport \
+    ros-${ROS_DISTRO}-message-filters \
+    ros-${ROS_DISTRO}-tf2 \
+    ros-${ROS_DISTRO}-tf2-ros \
+    ros-${ROS_DISTRO}-tf2-geometry-msgs \
+    ros-${ROS_DISTRO}-rviz2 \
+    mesa-utils \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://ceres-solver.googlesource.com/ceres-solver && \
+    cd ceres-solver && \
+    git checkout tags/${CERES_VERSION} && \
+    mkdir build && cd build && \
+    cmake .. && \
+    make -j$(nproc) install && \
+    cd / && rm -rf ceres-solver
+
+# Copy the repository to the container workspace
+RUN mkdir -p ${COLCON_WS}/src/VINS-Fusion-ROS2-humble-arm
+WORKDIR ${COLCON_WS}/src/VINS-Fusion-ROS2-humble-arm
+COPY . .
+
+WORKDIR ${COLCON_WS}
+
+RUN /bin/bash -c "source /opt/ros/${ROS_DISTRO}/setup.bash && \
+    colcon build --symlink-install --cmake-args -DCMAKE_BUILD_TYPE=Release"
+    
+WORKDIR /root
+RUN pip3 install \
+    opencv-python \
+    pycocotools \
+    matplotlib \
+    onnxruntime \
+    onnx
+RUN pip3 install --upgrade pip && \
+    pip3 install numpy==1.24.4 && \
+    pip3 install --no-cache-dir \
+    torch torchvision \
+    --extra-index-url https://jetson-ai-lab.io
+
+#Mobile SAM
+RUN pip3 install timm
+RUN pip3 install git+https://github.com/ChaoningZhang/MobileSAM.git
+RUN mkdir -p segment-anything/checkpoints
+WORKDIR segment-anything/checkpoints
+RUN wget https://github.com/ChaoningZhang/MobileSAM/raw/master/weights/mobile_sam.pt -O /root/segment-anything/checkpoints/mobile_sam.pt
+
+#DATASET
+WORKDIR /root 
+RUN mkdir DATASET-FOLDER 
+# COPY MH_01_easy.bag /root/DATASET-FOLDER/
+
+WORKDIR ${COLCON_WS}
+RUN echo "source /opt/ros/${ROS_DISTRO}/setup.bash" >> /root/.bashrc && \
+    echo "source ${COLCON_WS}/install/setup.bash" >> /root/.bashrc
