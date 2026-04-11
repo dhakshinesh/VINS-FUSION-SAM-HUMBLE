@@ -415,6 +415,30 @@ void Estimator::initFirstPose(Eigen::Vector3d p, Eigen::Matrix3d r)
 }
 
 
+// SAM Integration
+void Estimator::initSAM(std::shared_ptr<rclcpp::Node> node, bool use_sam, int update_frequency)
+{
+    if (use_sam && node != nullptr)
+    {
+        sam_client_ = std::make_shared<SAMClient>(node);
+        if (sam_client_->isServiceAvailable())
+        {
+            featureTracker.setSAMClient(sam_client_);
+            featureTracker.initSAM(true, update_frequency);
+            RCLCPP_INFO(node->get_logger(), "SAM integration initialized successfully in estimator.");
+        }
+        else
+        {
+            RCLCPP_WARN(node->get_logger(), "SAM client could not connect. Proceeding without SAM.");
+            featureTracker.initSAM(false);
+        }
+    }
+    else
+    {
+        featureTracker.initSAM(false);
+    }
+}
+
 void Estimator::processIMU(double t, double dt, const Vector3d &linear_acceleration, const Vector3d &angular_velocity)
 {
     if (!first_imu)

@@ -32,6 +32,8 @@
 #include "camodocal/camera_models/CataCamera.h"
 #include "camodocal/camera_models/PinholeCamera.h"
 #include "../estimator/parameters.h"
+#include "../parameters.h"
+#include "../sam_service/sam_client.hpp"
 #include "../utility/tic_toc.h"
 
 using namespace std;
@@ -74,6 +76,12 @@ public:
     void removeOutliers(set<int> &removePtsIds);
     cv::Mat getTrackImage();
     bool inBorder(const cv::Point2f &pt);
+    vector<cv::Point2f> getTrackedPts();
+
+    // SAM Integration
+    void initSAM(bool use_sam, int update_frequency = 5);
+    void setSAMClient(std::shared_ptr<SAMClient> client);
+    cv::Mat getMask();
 
     int row, col;
     cv::Mat imTrack;
@@ -88,6 +96,14 @@ public:
     vector<cv::Point2f> pts_velocity, right_pts_velocity;
     vector<int> ids, ids_right;
     vector<int> track_cnt;
+
+    // SAM Integration
+    std::shared_ptr<SAMClient> sam_client_;
+    bool use_sam_;
+    int sam_update_frequency_;
+    int frame_count_;
+    cv::Mat sam_mask;
+
     map<int, cv::Point2f> cur_un_pts_map, prev_un_pts_map;
     map<int, cv::Point2f> cur_un_right_pts_map, prev_un_right_pts_map;
     map<int, cv::Point2f> prevLeftPtsMap;

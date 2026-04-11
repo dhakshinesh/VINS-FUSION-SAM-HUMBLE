@@ -45,7 +45,7 @@ void reduceVector(vector<int> &v, vector<uchar> status)
     v.resize(j);
 }
 
-FeatureTracker::FeatureTracker()
+FeatureTracker::FeatureTracker() : sam_client_(nullptr), use_sam_(false), sam_update_frequency_(5), frame_count_(0)
 {
     stereo_cam = 0;
     n_id = 0;
@@ -83,6 +83,27 @@ void FeatureTracker::setMask()
     }
 }
 
+vector<cv::Point2f> FeatureTracker::getTrackedPts()
+{
+    return pts;
+}
+
+cv::Mat FeatureTracker::getMask()
+{
+    return mask;
+}
+
+void FeatureTracker::initSAM(bool use_sam, int update_frequency)
+{
+    use_sam_ = use_sam;
+    sam_update_frequency_ = update_frequency;
+}
+
+void FeatureTracker::setSAMClient(std::shared_ptr<SAMClient> client)
+{
+    sam_client_ = client;
+}
+
 void FeatureTracker::addPoints()
 {
     for (auto &p : n_pts)
@@ -108,8 +129,21 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     cur_img = _img;
     row = cur_img.rows;
     col = cur_img.cols;
+    cv::Mat equ;
+    cv::equalizeHist(img, equ);
+    
+    // SAM Segmentation update
+    frame_count_++;
+    if (use_sam_ && sam_client_ != nullptr && (frame_count_ % sam_update_frequency_ == 0))
+    {
+        cv::Mat color_img, new_sam_mask;
+        cv::cvtColor(img, color_img, cv::COLOR_GRAY2BGR);
+        if (sam_client_->getSegmentationMask(color_img, new_sam_mask))
+            sam_mask = new_sam_mask;
+    }
+
     cv::Mat rightImg = _img1;
-    /*
+    if (EQUALIZE)
     {
         cv::Ptr<cv::CLAHE> clahe = cv::createCLAHE(3.0, cv::Size(8, 8));
         clahe->apply(cur_img, cur_img);

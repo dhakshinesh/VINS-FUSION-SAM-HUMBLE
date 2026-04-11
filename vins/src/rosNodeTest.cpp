@@ -256,6 +256,12 @@ int main(int argc, char **argv)
 
     readParameters(config_file);
     estimator.setParameter();
+    
+    // SAM Integration init
+    // Ensure SAM client is initialized and connected to the ROS service
+    bool use_sam = true; // Set to true to utilize SAM
+    int sam_update_frequency = 5; // SAM inference every 5 frames
+    estimator.initSAM(n, use_sam, sam_update_frequency);
 
 #ifdef EIGEN_DONT_PARALLELIZE
     ROS_DEBUG("EIGEN_DONT_PARALLELIZE");

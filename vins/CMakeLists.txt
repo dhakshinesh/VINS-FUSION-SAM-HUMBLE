@@ -19,6 +19,7 @@ find_package(tf2_ros REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(camera_models REQUIRED)
 find_package(image_transport REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 
 
 find_package(OpenCV REQUIRED)
@@ -33,6 +34,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Eigen3)
 include_directories(
   ${EIGEN3_INCLUDE_DIR}
+)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "srv/SAMSegmentation.srv"
+  DEPENDENCIES sensor_msgs geometry_msgs
 )
 
 
@@ -52,8 +58,12 @@ add_library(vins_lib
     src/initial/initial_aligment.cpp
     src/initial/initial_sfm.cpp
     src/initial/initial_ex_rotation.cpp
-    src/featureTracker/feature_tracker.cpp)
+    src/featureTracker/feature_tracker.cpp
+    src/sam_service/sam_client.cpp)
 target_link_libraries(vins_lib  ${OpenCV_LIBS} ${CERES_LIBRARIES})
+
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(vins_lib "${cpp_typesupport_target}")
 
 ament_target_dependencies(vins_lib rclcpp rcpputils std_msgs visualization_msgs geometry_msgs nav_msgs tf2 tf2_ros cv_bridge camera_models image_transport)
 
@@ -99,6 +109,11 @@ install(
 #    # rviz
 #    DESTINATION share/${PROJECT_NAME}
 #    )
+
+install(
+  PROGRAMS src/sam_service/sam_ros2_service.py
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 
 ament_package()
