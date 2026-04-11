@@ -1,4 +1,4 @@
-FROM dustynv/ros:humble-desktop-l4t-r36.3.0
+FROM dustynv/ros:humble-ros-base-l4t-r36.3.0
 
 ENV CERES_VERSION=2.0.0
 ENV COLCON_WS=/root/colcon_ws
@@ -25,9 +25,14 @@ RUN apt-get update && apt-get install -y \
     libgoogle-glog-dev \
     libsuitesparse-dev \
     python3-colcon-common-extensions \
+    ros-${ROS_DISTRO}-image-transport \
+    ros-${ROS_DISTRO}-message-filters \
+    ros-${ROS_DISTRO}-tf2 \
+    ros-${ROS_DISTRO}-tf2-ros \
+    ros-${ROS_DISTRO}-tf2-geometry-msgs \
+    ros-${ROS_DISTRO}-rviz2 \
     mesa-utils \
     && rm -rf /var/lib/apt/lists/*
-
 
 RUN git clone https://ceres-solver.googlesource.com/ceres-solver && \
     cd ceres-solver && \
@@ -36,6 +41,14 @@ RUN git clone https://ceres-solver.googlesource.com/ceres-solver && \
     cmake .. && \
     make -j$(nproc) install && \
     cd / && rm -rf ceres-solver
+
+# Copy the repository to the container workspace
+RUN mkdir -p ${COLCON_WS}/src/VINS-Fusion-ROS2-humble-arm
+WORKDIR ${COLCON_WS}/src
+
+# Build cv_bridge from source to avoid apt-get opencv conflicts with Jetson
+RUN git clone -b humble https://github.com/ros-perception/vision_opencv.git
+
 
 # Copy the repository to the container workspace
 RUN mkdir -p ${COLCON_WS}/src/VINS-Fusion-ROS2-humble-arm
