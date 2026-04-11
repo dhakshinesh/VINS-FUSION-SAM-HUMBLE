@@ -32,7 +32,6 @@
 #include "camodocal/camera_models/CataCamera.h"
 #include "camodocal/camera_models/PinholeCamera.h"
 #include "../estimator/parameters.h"
-#include "../parameters.h"
 #include "../sam_service/sam_client.hpp"
 #include "../utility/tic_toc.h"
 
