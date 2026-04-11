@@ -31,6 +31,8 @@ RUN apt-get update && apt-get install -y \
     python3-colcon-common-extensions \
     ros-${ROS_DISTRO}-ament-lint-auto \
     ros-${ROS_DISTRO}-ament-lint-common \
+    ros-${ROS_DISTRO}-rosidl-default-generators \
+    ros-${ROS_DISTRO}-rosidl-default-runtime \
     ros-${ROS_DISTRO}-image-transport \
     ros-${ROS_DISTRO}-message-filters \
     ros-${ROS_DISTRO}-tf2 \
