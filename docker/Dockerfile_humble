@@ -8,6 +8,11 @@ ENV PYTHONIOENCODING=UTF-8
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=all
 
+# Fix expired or missing ROS 2 GPG keys
+RUN apt-get update || apt-get install -y --no-install-recommends curl ca-certificates && \
+    curl -sSL https://raw.githubusercontent.com/ros/rosdistro/master/ros.key -o /usr/share/keyrings/ros-archive-keyring.gpg || true && \
+    apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 4B63CF8FDE49746E98FA01DDAD19BAB3CBF125EA || true
+
 RUN apt-get update && apt-get install -y \
     cmake \
     git \
