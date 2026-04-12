@@ -74,8 +74,9 @@ class SAMService(Node):
         
         self.bridge = CvBridge()
         
-        # Create service
+        # Create service and visual publisher
         self.srv = self.create_service(SAMSegmentation, 'sam_segmentation', self.handle_segmentation)
+        self.mask_pub = self.create_publisher(Image, 'sam_mask_visual', 2)
         self.get_logger().info("SAM service ready")
     
     def handle_segmentation(self, request, response):
@@ -131,6 +132,10 @@ class SAMService(Node):
             
             # Convert mask to ROS image message
             mask_msg = self.bridge.cv2_to_imgmsg(combined_mask, encoding="mono8")
+            
+            # Publish for visualization and log
+            self.mask_pub.publish(mask_msg)
+            self.get_logger().info(f"Successfully generated and published segmentation mask!")
             
             response.mask = mask_msg
             response.success = True
