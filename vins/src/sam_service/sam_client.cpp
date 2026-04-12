@@ -2,7 +2,8 @@
 
 SAMClient::SAMClient(std::shared_ptr<rclcpp::Node> node) : nh_(node), enabled_(true), service_available_(false)
 {
-    sam_client_ = nh_->create_client<vins::srv::SAMSegmentation>("sam_segmentation");
+    client_node_ = std::make_shared<rclcpp::Node>("sam_service_client_isolated");
+    sam_client_ = client_node_->create_client<vins::srv::SAMSegmentation>("sam_segmentation");
     
     // Wait for service to become available (with timeout)
     service_available_ = sam_client_->wait_for_service(std::chrono::seconds(5));
@@ -57,7 +58,7 @@ bool SAMClient::getSegmentationMask(const cv::Mat& image, cv::Mat& mask)
         // Call service
         auto result_future = sam_client_->async_send_request(request);
         
-        if (rclcpp::spin_until_future_complete(nh_, result_future, std::chrono::seconds(5)) ==
+        if (rclcpp::spin_until_future_complete(client_node_, result_future, std::chrono::seconds(5)) ==
             rclcpp::FutureReturnCode::SUCCESS)
         {
             auto response = result_future.get();
@@ -132,7 +133,7 @@ bool SAMClient::getSegmentationMaskWithPoints(const cv::Mat& image,
         // Call service
         auto result_future = sam_client_->async_send_request(request);
         
-        if (rclcpp::spin_until_future_complete(nh_, result_future, std::chrono::seconds(5)) ==
+        if (rclcpp::spin_until_future_complete(client_node_, result_future, std::chrono::seconds(5)) ==
             rclcpp::FutureReturnCode::SUCCESS)
         {
             auto response = result_future.get();

@@ -49,6 +49,7 @@ public:
 
 private:
     std::shared_ptr<rclcpp::Node> nh_;
+    std::shared_ptr<rclcpp::Node> client_node_;
     rclcpp::Client<vins::srv::SAMSegmentation>::SharedPtr sam_client_;
     bool enabled_;
     std::mutex mutex_;

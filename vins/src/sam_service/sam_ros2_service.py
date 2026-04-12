@@ -17,7 +17,7 @@ import os
 # Add segment-anything to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../../../segment-anything'))
 
-from segment_anything import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
+from mobile_sam import sam_model_registry, SamAutomaticMaskGenerator, SamPredictor
 import torch
 
 class SAMService(Node):
@@ -25,8 +25,8 @@ class SAMService(Node):
         super().__init__('sam_service')
         
         # Get parameters
-        self.declare_parameter('sam_model_type', 'vit_b')
-        self.declare_parameter('sam_checkpoint_path', '')
+        self.declare_parameter('sam_model_type', 'vit_t')
+        self.declare_parameter('sam_checkpoint_path', '/home/dhakshinesh/segment-anything/checkpoints/mobile_sam.pt')
         self.declare_parameter('use_automatic_mask', True)
         self.declare_parameter('device', 'cuda' if torch.cuda.is_available() else 'cpu')
 
