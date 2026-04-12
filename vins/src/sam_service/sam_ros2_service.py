@@ -52,7 +52,8 @@ class SAMService(Node):
                 # Use automatic mask generator for full image segmentation
                 self.mask_generator = SamAutomaticMaskGenerator(
                     sam,
-                    points_per_side=32,
+                    points_per_side=16,
+                    points_per_batch=16,
                     pred_iou_thresh=0.86,
                     stability_score_thresh=0.92,
                     crop_n_layers=1,
