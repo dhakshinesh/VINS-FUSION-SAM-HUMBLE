@@ -23,6 +23,8 @@ Eigen::Matrix3d Utility::g2R(const Eigen::Vector3d &g)
 
 #include <fstream>
 #include <iostream>
+#include <vector>
+#include <string>
 
 double Utility::getCpuUsage() {
     static unsigned long long lastTotalUser = 0, lastTotalUserLow = 0, lastTotalSys = 0, lastTotalIdle = 0;
@@ -50,10 +52,40 @@ double Utility::getCpuUsage() {
 }
 
 double Utility::getGpuUsage() {
-    std::ifstream file("/sys/devices/gpu.0/load"); // Tegra/Jetson
+    static const std::vector<std::string> gpu_paths = {
+        "/sys/devices/gpu.0/load",
+        "/sys/class/devfreq/17000000.ga10b/device/load",
+        "/sys/devices/17000000.ga10b/load",
+        "/sys/devices/platform/17000000.ga10b/load",
+        "/sys/class/devfreq/17000000.gv11b/device/load",
+        "/sys/class/devfreq/17000000.gpu/device/load"
+    };
+
+    static std::string active_path = "";
+
+    if (active_path.empty()) {
+        for (const auto& path : gpu_paths) {
+            std::ifstream test_file(path);
+            if (test_file.is_open()) {
+                active_path = path;
+                break;
+            }
+        }
+        if (active_path.empty()) {
+            active_path = "NONE";
+        }
+    }
+
+    if (active_path == "NONE") return 0.0;
+
+    std::ifstream file(active_path);
     if (!file.is_open()) return 0.0;
+
     double load = 0.0;
-    if (file >> load) return load / 10.0; // Jetson load format (per mille)
+    if (file >> load) {
+        return load / 10.0; // Jetson load format (per mille to percent)
+    }
+    
     return 0.0;
 }
 
