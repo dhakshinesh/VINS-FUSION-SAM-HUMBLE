@@ -8,6 +8,8 @@
  *******************************************************/
 
 #include "parameters.h"
+#include <cstdlib>
+
 
 double INIT_DEPTH;
 double MIN_PARALLAX;
@@ -118,6 +120,20 @@ void readParameters(std::string config_file)
     MIN_PARALLAX = MIN_PARALLAX / FOCAL_LENGTH;
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
+    
+    if (!OUTPUT_FOLDER.empty() && OUTPUT_FOLDER.front() == '~') {
+        const char* home = std::getenv("HOME");
+        if (home) {
+            OUTPUT_FOLDER.replace(0, 1, home);
+        }
+    }
+    if (!OUTPUT_FOLDER.empty()) {
+        std::string command = "mkdir -p " + OUTPUT_FOLDER;
+        if (system(command.c_str()) != 0) {
+            ROS_WARN("Failed to create output directory.");
+        }
+    }
+
     VINS_RESULT_PATH = OUTPUT_FOLDER + "/vio.csv";
     std::cout << "result path " << VINS_RESULT_PATH << std::endl;
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
