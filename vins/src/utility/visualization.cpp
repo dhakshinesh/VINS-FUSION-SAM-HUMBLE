@@ -184,15 +184,14 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
         // write extended result to file
         static int extended_log_seq = 0;
         ofstream foutExt(VINS_EXTENDED_LOG_PATH, ios::app);
-        foutExt.setf(ios::fixed, ios::floatfield);
-        foutExt.precision(9);
-        foutExt << header.stamp.sec + header.stamp.nanosec * (1e-9) << ",";
         
-        foutExt.precision(5);
-        foutExt << extended_log_seq++ << "," 
-                << header.stamp.sec + header.stamp.nanosec * (1e-9) << "," 
-                << "world," 
-                << "world," 
+        foutExt << std::fixed << std::setprecision(9) << (header.stamp.sec + header.stamp.nanosec * 1e-9) << ",";
+        foutExt << extended_log_seq++ << ",";
+        foutExt << std::fixed << std::setprecision(9) << (header.stamp.sec + header.stamp.nanosec * 1e-9) << ",";
+        
+        foutExt << "world," << "world,";
+        
+        foutExt << std::fixed << std::setprecision(5)
                 << estimator.Ps[WINDOW_SIZE].x() << ","
                 << estimator.Ps[WINDOW_SIZE].y() << ","
                 << estimator.Ps[WINDOW_SIZE].z() << ","
@@ -210,15 +209,27 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
 
         for (int i=0; i<36; i++) foutExt << "0.0,";
 
-        foutExt << header.stamp.sec + header.stamp.nanosec * (1e-9) << ","
-                << "world,"
+        foutExt << std::fixed << std::setprecision(9) << (header.stamp.sec + header.stamp.nanosec * 1e-9) << ",";
+        foutExt << "world,";
+        
+        foutExt << std::fixed << std::setprecision(5)
                 << estimator.current_frame_processing_time << ","
                 << estimator.current_feature_tracking_time << ","
-                << estimator.current_optimization_time << ","
-                << estimator.featureTracker.sam_invoked_.load() << ","
-                << estimator.featureTracker.sam_start_time_log_.load() << ","
-                << estimator.featureTracker.sam_end_time_log_.load() << ","
-                << estimator.featureTracker.sam_duration_log_.load() << ","
+                << estimator.current_optimization_time << ",";
+        
+        int invoked = estimator.featureTracker.sam_invoked_.load();
+        foutExt << invoked << ",";
+        
+        if (invoked) {
+            foutExt << std::fixed << std::setprecision(5)
+                    << estimator.featureTracker.sam_start_time_log_.load() << ","
+                    << estimator.featureTracker.sam_end_time_log_.load() << ","
+                    << estimator.featureTracker.sam_duration_log_.load() << ",";
+        } else {
+            foutExt << "NaN,NaN,NaN,";
+        }
+        
+        foutExt << std::fixed << std::setprecision(2)
                 << Utility::getCpuUsage() << ","
                 << Utility::getGpuUsage() << ","
                 << "0.0\n";

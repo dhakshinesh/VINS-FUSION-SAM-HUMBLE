@@ -130,6 +130,10 @@ class SAMService(Node):
                     # No points provided, return empty mask
                     combined_mask = np.zeros((rgb_image.shape[0], rgb_image.shape[1]), dtype=np.uint8)
             
+            # Synchronize GPU to ensure correct duration tracking across the ROS pipeline
+            if self.device == 'cuda':
+                torch.cuda.synchronize()
+
             # Convert mask to ROS image message
             mask_msg = self.bridge.cv2_to_imgmsg(combined_mask, encoding="mono8")
             

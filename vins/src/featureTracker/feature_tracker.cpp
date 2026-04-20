@@ -101,7 +101,9 @@ void FeatureTracker::initSAM(bool use_sam, double update_interval)
 
 void FeatureTracker::samThreadMethod(cv::Mat image)
 {
-    sam_start_time_log_ = cur_time; // approximate start
+    double start_ros_time = cur_time;
+    sam_start_time_log_ = start_ros_time; // approximate start
+    TicToc t_sam;
     cv::Mat color_img, new_sam_mask;
     cv::cvtColor(image, color_img, cv::COLOR_GRAY2BGR);
     if (sam_client_ != nullptr && sam_client_->getSegmentationMask(color_img, new_sam_mask))
@@ -110,10 +112,8 @@ void FeatureTracker::samThreadMethod(cv::Mat image)
         sam_mask = new_sam_mask.clone();
     }
     
-    sam_end_time_log_ = cur_time;
-    if (sam_start_time_log_.load() > 0) {
-        sam_duration_log_ = sam_end_time_log_.load() - sam_start_time_log_.load();
-    }
+    sam_duration_log_ = t_sam.toc();
+    sam_end_time_log_ = start_ros_time + (sam_duration_log_.load() / 1000.0);
     sam_processing_ = false;
 }
 
