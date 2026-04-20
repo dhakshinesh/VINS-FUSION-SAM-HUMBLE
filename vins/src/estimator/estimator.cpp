@@ -174,7 +174,10 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         featureFrame = featureTracker.trackImage(t, _img);
     else
         featureFrame = featureTracker.trackImage(t, _img, _img1);
-    //printf("featureTracker time: %f\n", featureTrackerTime.toc());
+    
+    mBuf.lock();
+    feature_tracking_times_map[t] = featureTrackerTime.toc();
+    mBuf.unlock();
 
     if (SHOW_TRACK)
     {
@@ -198,9 +201,8 @@ void Estimator::inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1)
         mBuf.unlock();
         TicToc processTime;
         processMeasurements();
-        printf("process time: %f\n", processTime.toc());
+        // printf("process time: %f\n", processTime.toc());
     }
-    
 }
 
 void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vector3d &angularVelocity)
@@ -320,7 +322,7 @@ void Estimator::processMeasurements()
             featureBuf.pop();
             mBuf.unlock();
 
-            // cout << "3" << endl;
+            TicToc frameProcessingTimer;
             if(USE_IMU)
             {
                 if(!initFirstPoseFlag)
@@ -337,13 +339,20 @@ void Estimator::processMeasurements()
                     processIMU(accVector[i].first, dt, accVector[i].second, gyrVector[i].second);
                 }
             }
-            // cout << "4" << endl;
 
             mProcess.lock();
+            
+            if (feature_tracking_times_map.find(feature.first) != feature_tracking_times_map.end()) {
+                current_feature_tracking_time = feature_tracking_times_map[feature.first];
+                feature_tracking_times_map.erase(feature.first);
+            } else {
+                current_feature_tracking_time = 0.0;
+            }
+
             processImage(feature.second, feature.first);
             prevTime = curTime;
-
-            // cout << "5" << endl;
+            
+            current_frame_processing_time = frameProcessingTimer.toc();
 
             printStatistics(*this, 0);
 
@@ -616,6 +625,7 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         TicToc t_solve;
         optimization();
         ROS_INFO("solver costs: %f [ms]", t_solve.toc());
+        current_optimization_time = t_solve.toc();
 
         set<int> removeIndex;
         outliersRejection(removeIndex);

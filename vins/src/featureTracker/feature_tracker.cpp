@@ -101,12 +101,18 @@ void FeatureTracker::initSAM(bool use_sam, double update_interval)
 
 void FeatureTracker::samThreadMethod(cv::Mat image)
 {
+    sam_start_time_log_ = cur_time; // approximate start
     cv::Mat color_img, new_sam_mask;
     cv::cvtColor(image, color_img, cv::COLOR_GRAY2BGR);
     if (sam_client_ != nullptr && sam_client_->getSegmentationMask(color_img, new_sam_mask))
     {
         std::lock_guard<std::mutex> lock(sam_mutex_);
         sam_mask = new_sam_mask.clone();
+    }
+    
+    sam_end_time_log_ = cur_time;
+    if (sam_start_time_log_.load() > 0) {
+        sam_duration_log_ = sam_end_time_log_.load() - sam_start_time_log_.load();
     }
     sam_processing_ = false;
 }
@@ -146,6 +152,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     
     // SAM Segmentation update
     frame_count_++;
+    sam_invoked_ = 0;
     if (use_sam_ && sam_client_ != nullptr)
     {
         if (last_sam_time_ < 0 || (_cur_time - last_sam_time_) >= sam_update_interval_)
@@ -154,6 +161,7 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
             {
                 last_sam_time_ = _cur_time;
                 sam_processing_ = true;
+                sam_invoked_ = 1;
                 cv::Mat thread_img = cur_img.clone();
                 if (sam_thread_.joinable())
                 {

@@ -32,6 +32,7 @@ int ESTIMATE_TD;
 int ROLLING_SHUTTER;
 std::string EX_CALIB_RESULT_PATH;
 std::string VINS_RESULT_PATH;
+std::string VINS_EXTENDED_LOG_PATH;
 std::string OUTPUT_FOLDER;
 std::string IMU_TOPIC;
 int ROW, COL;
@@ -121,6 +122,20 @@ void readParameters(std::string config_file)
     std::cout << "result path " << VINS_RESULT_PATH << std::endl;
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
+
+    VINS_EXTENDED_LOG_PATH = OUTPUT_FOLDER + "/vio_extended.csv";
+    std::cout << "extended result path " << VINS_EXTENDED_LOG_PATH << std::endl;
+    std::ofstream foutExt(VINS_EXTENDED_LOG_PATH, std::ios::out);
+    foutExt << "%time,field.header.seq,field.header.stamp,field.header.frame_id,field.child_frame_id,"
+            << "field.pose.pose.position.x,field.pose.pose.position.y,field.pose.pose.position.z,"
+            << "field.pose.pose.orientation.x,field.pose.pose.orientation.y,field.pose.pose.orientation.z,field.pose.pose.orientation.w,";
+    for (int i=0; i<36; i++) foutExt << "field.pose.covariance" << i << ",";
+    foutExt << "field.twist.twist.linear.x,field.twist.twist.linear.y,field.twist.twist.linear.z,"
+            << "field.twist.twist.angular.x,field.twist.twist.angular.y,field.twist.twist.angular.z,";
+    for (int i=0; i<36; i++) foutExt << "field.twist.covariance" << i << ",";
+    foutExt << "timestamp,frame_id,frame_processing_time,feature_tracking_time,optimization_time,"
+            << "sam_invoked,sam_start_time,sam_end_time,sam_duration,cpu_usage,gpu_usage,covariance_value\n";
+    foutExt.close();
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)

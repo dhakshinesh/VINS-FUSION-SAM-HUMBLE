@@ -117,6 +117,11 @@ public:
     double last_sam_time_;
     void samThreadMethod(cv::Mat image);
 
+    std::atomic<int> sam_invoked_{0};
+    std::atomic<double> sam_start_time_log_{0.0};
+    std::atomic<double> sam_end_time_log_{0.0};
+    std::atomic<double> sam_duration_log_{0.0};
+
     map<int, cv::Point2f> cur_un_pts_map, prev_un_pts_map;
     map<int, cv::Point2f> cur_un_right_pts_map, prev_un_right_pts_map;
     map<int, cv::Point2f> prevLeftPtsMap;

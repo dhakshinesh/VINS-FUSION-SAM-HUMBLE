@@ -180,6 +180,51 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
               << estimator.Vs[WINDOW_SIZE].y() << ","
               << estimator.Vs[WINDOW_SIZE].z() << "," << endl;
         foutC.close();
+        
+        // write extended result to file
+        static int extended_log_seq = 0;
+        ofstream foutExt(VINS_EXTENDED_LOG_PATH, ios::app);
+        foutExt.setf(ios::fixed, ios::floatfield);
+        foutExt.precision(9);
+        foutExt << header.stamp.sec + header.stamp.nanosec * (1e-9) << ",";
+        
+        foutExt.precision(5);
+        foutExt << extended_log_seq++ << "," 
+                << header.stamp.sec + header.stamp.nanosec * (1e-9) << "," 
+                << "world," 
+                << "world," 
+                << estimator.Ps[WINDOW_SIZE].x() << ","
+                << estimator.Ps[WINDOW_SIZE].y() << ","
+                << estimator.Ps[WINDOW_SIZE].z() << ","
+                << tmp_Q.x() << ","
+                << tmp_Q.y() << ","
+                << tmp_Q.z() << ","
+                << tmp_Q.w() << ",";
+        
+        for (int i=0; i<36; i++) foutExt << "0.0,";
+        
+        foutExt << estimator.Vs[WINDOW_SIZE].x() << ","
+                << estimator.Vs[WINDOW_SIZE].y() << ","
+                << estimator.Vs[WINDOW_SIZE].z() << ","
+                << "0.0,0.0,0.0,"; // angular is 0.0
+
+        for (int i=0; i<36; i++) foutExt << "0.0,";
+
+        foutExt << header.stamp.sec + header.stamp.nanosec * (1e-9) << ","
+                << "world,"
+                << estimator.current_frame_processing_time << ","
+                << estimator.current_feature_tracking_time << ","
+                << estimator.current_optimization_time << ","
+                << estimator.featureTracker.sam_invoked_.load() << ","
+                << estimator.featureTracker.sam_start_time_log_.load() << ","
+                << estimator.featureTracker.sam_end_time_log_.load() << ","
+                << estimator.featureTracker.sam_duration_log_.load() << ","
+                << Utility::getCpuUsage() << ","
+                << Utility::getGpuUsage() << ","
+                << "0.0\n";
+        
+        foutExt.close();
+
         Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
         printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.sec + header.stamp.nanosec * (1e-9),
                                                           tmp_T.x(), tmp_T.y(), tmp_T.z(),

@@ -184,4 +184,10 @@ class Estimator
 
     bool initFirstPoseFlag;
     bool initThreadFlag;
+
+    // Extended Logging Timings
+    std::map<double, double> feature_tracking_times_map;
+    double current_optimization_time;
+    double current_frame_processing_time;
+    double current_feature_tracking_time;
 };
