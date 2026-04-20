@@ -45,7 +45,7 @@ void reduceVector(vector<int> &v, vector<uchar> status)
     v.resize(j);
 }
 
-FeatureTracker::FeatureTracker() : sam_client_(nullptr), use_sam_(false), sam_update_frequency_(5), frame_count_(0)
+FeatureTracker::FeatureTracker() : sam_client_(nullptr), use_sam_(false), sam_update_interval_(5.0), frame_count_(0), sam_processing_(false), last_sam_time_(-1.0)
 {
     stereo_cam = 0;
     n_id = 0;
@@ -93,10 +93,22 @@ cv::Mat FeatureTracker::getMask()
     return mask;
 }
 
-void FeatureTracker::initSAM(bool use_sam, int update_frequency)
+void FeatureTracker::initSAM(bool use_sam, double update_interval)
 {
     use_sam_ = use_sam;
-    sam_update_frequency_ = update_frequency;
+    sam_update_interval_ = update_interval;
+}
+
+void FeatureTracker::samThreadMethod(cv::Mat image)
+{
+    cv::Mat color_img, new_sam_mask;
+    cv::cvtColor(image, color_img, cv::COLOR_GRAY2BGR);
+    if (sam_client_ != nullptr && sam_client_->getSegmentationMask(color_img, new_sam_mask))
+    {
+        std::lock_guard<std::mutex> lock(sam_mutex_);
+        sam_mask = new_sam_mask.clone();
+    }
+    sam_processing_ = false;
 }
 
 void FeatureTracker::setSAMClient(std::shared_ptr<SAMClient> client)
@@ -134,12 +146,22 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     
     // SAM Segmentation update
     frame_count_++;
-    if (use_sam_ && sam_client_ != nullptr && (frame_count_ % sam_update_frequency_ == 0))
+    if (use_sam_ && sam_client_ != nullptr)
     {
-        cv::Mat color_img, new_sam_mask;
-        cv::cvtColor(cur_img, color_img, cv::COLOR_GRAY2BGR);
-        if (sam_client_->getSegmentationMask(color_img, new_sam_mask))
-            sam_mask = new_sam_mask;
+        if (last_sam_time_ < 0 || (_cur_time - last_sam_time_) >= sam_update_interval_)
+        {
+            if (!sam_processing_.load())
+            {
+                last_sam_time_ = _cur_time;
+                sam_processing_ = true;
+                cv::Mat thread_img = cur_img.clone();
+                if (sam_thread_.joinable())
+                {
+                    sam_thread_.join();
+                }
+                sam_thread_ = std::thread(&FeatureTracker::samThreadMethod, this, thread_img);
+            }
+        }
     }
 
     cv::Mat rightImg = _img1;

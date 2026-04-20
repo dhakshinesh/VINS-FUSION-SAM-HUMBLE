@@ -55,7 +55,7 @@ class Estimator
     void inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
 
     // SAM Integration
-    void initSAM(std::shared_ptr<rclcpp::Node> node, bool use_sam, int update_frequency = 5);
+    void initSAM(std::shared_ptr<rclcpp::Node> node, bool use_sam, double update_interval = 5.0);
 
     // internal thread
     void processMeasurements();
