@@ -53,6 +53,16 @@ double F_THRESHOLD;
 int SHOW_TRACK;
 int FLOW_BACK;
 
+int SAM_MODE;
+double SAM_MIN_COOLDOWN;
+double SAM_MAX_IDLE_TIME;
+double SAM_OVERLAP_THRESH;
+double SAM_TRANS_THRESH;
+double SAM_ROT_THRESH;
+double SAM_BLUR_THRESH;
+int SAM_MIN_FEATURES;
+
+
 
 template <typename T>
 T readParam(rclcpp::Node::SharedPtr n, std::string name)
@@ -94,6 +104,16 @@ void readParameters(std::string config_file)
     F_THRESHOLD = fsSettings["F_threshold"];
     SHOW_TRACK = fsSettings["show_track"];
     FLOW_BACK = fsSettings["flow_back"];
+
+    // Default SAM parameters
+    SAM_MODE = fsSettings["sam_mode"].empty() ? 2 : (int)fsSettings["sam_mode"];
+    SAM_MIN_COOLDOWN = fsSettings["sam_min_cooldown"].empty() ? 2.0 : (double)fsSettings["sam_min_cooldown"];
+    SAM_MAX_IDLE_TIME = fsSettings["sam_max_idle_time"].empty() ? 10.0 : (double)fsSettings["sam_max_idle_time"];
+    SAM_OVERLAP_THRESH = fsSettings["sam_overlap_thresh"].empty() ? 0.5 : (double)fsSettings["sam_overlap_thresh"];
+    SAM_TRANS_THRESH = fsSettings["sam_trans_thresh"].empty() ? 2.0 : (double)fsSettings["sam_trans_thresh"];
+    SAM_ROT_THRESH = fsSettings["sam_rot_thresh"].empty() ? 0.78 : (double)fsSettings["sam_rot_thresh"];
+    SAM_BLUR_THRESH = fsSettings["sam_blur_thresh"].empty() ? 0.05 : (double)fsSettings["sam_blur_thresh"]; // e.g. 1.5 rad/s * 0.03s
+    SAM_MIN_FEATURES = fsSettings["sam_min_features"].empty() ? 20 : (int)fsSettings["sam_min_features"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 

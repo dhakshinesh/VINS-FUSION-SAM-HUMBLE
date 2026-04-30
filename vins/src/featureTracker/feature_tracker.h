@@ -114,8 +114,17 @@ public:
     std::mutex sam_mutex_;
     std::atomic<bool> sam_processing_;
     std::thread sam_thread_;
-    double last_sam_time_;
+    std::atomic<double> last_sam_time_;
+    
+    // Intelligent Trigger variables
+    std::set<int> last_sam_feature_ids_;
+    std::atomic<double> current_angular_vel_{0.0};
+    std::atomic<double> current_imu_dt_{0.0};
+    std::atomic<bool> force_sam_trigger_{false};
+    std::atomic<bool> sam_pose_sync_needed_{false};
+    
     void samThreadMethod(cv::Mat image);
+    void updateIMUKinematics(double angular_vel, double dt);
 
     std::atomic<int> sam_invoked_{0};
     std::atomic<double> sam_start_time_log_{0.0};

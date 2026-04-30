@@ -115,6 +115,9 @@ class Estimator
 
     FeatureTracker featureTracker;
     std::shared_ptr<SAMClient> sam_client_;
+    Eigen::Vector3d last_sam_P_{Eigen::Vector3d::Zero()};
+    Eigen::Matrix3d last_sam_R_{Eigen::Matrix3d::Identity()};
+    double last_imu_t_{-1.0};
 
     SolverFlag solver_flag;
     MarginalizationFlag  marginalization_flag;

@@ -54,6 +54,16 @@ F_threshold: 1.0        # ransac threshold (pixel)
 show_track: 1           # publish tracking image as topic
 flow_back: 1            # perform forward and backward optical flow to improve feature tracking accuracy
 
+# SAM Integration parameters
+sam_mode: 2               # 0: None, 1: Timed, 2: Intelligent
+sam_min_cooldown: 2.0     # Minimum time between SAM invocations (seconds)
+sam_max_idle_time: 10.0   # Maximum time before forcing SAM invocation (seconds)
+sam_overlap_thresh: 0.5   # Threshold for feature overlap (ratio)
+sam_trans_thresh: 2.0     # Threshold for translational drift (meters)
+sam_rot_thresh: 0.78      # Threshold for rotational drift (radians)
+sam_blur_thresh: 0.05     # Threshold for motion blur (angular_vel * dt)
+sam_min_features: 20      # Threshold for feature starvation (count)
+
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
 max_num_iterations: 8   # max solver itrations, to guarantee real time

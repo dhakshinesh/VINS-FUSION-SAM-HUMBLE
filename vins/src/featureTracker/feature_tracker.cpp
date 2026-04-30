@@ -140,6 +140,12 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
     return sqrt(dx * dx + dy * dy);
 }
 
+void FeatureTracker::updateIMUKinematics(double angular_vel, double dt)
+{
+    current_angular_vel_.store(angular_vel);
+    current_imu_dt_.store(dt);
+}
+
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
 {
     TicToc t_r;
@@ -153,15 +159,71 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     // SAM Segmentation update
     frame_count_++;
     sam_invoked_ = 0;
-    if (use_sam_ && sam_client_ != nullptr)
+    
+    if (use_sam_ && sam_client_ != nullptr && SAM_MODE > 0)
     {
-        if (last_sam_time_ < 0 || (_cur_time - last_sam_time_) >= sam_update_interval_)
+        bool trigger_sam = false;
+        
+        if (SAM_MODE == 1) // Timed Mode
+        {
+            if (last_sam_time_ < 0 || (_cur_time - last_sam_time_.load()) >= SAM_MIN_COOLDOWN)
+            {
+                trigger_sam = true;
+            }
+        }
+        else if (SAM_MODE == 2) // Intelligent Mode
+        {
+            bool cooldown_passed = last_sam_time_ < 0 || (_cur_time - last_sam_time_.load()) > SAM_MIN_COOLDOWN;
+            bool max_idle_exceeded = last_sam_time_ > 0 && (_cur_time - last_sam_time_.load()) > SAM_MAX_IDLE_TIME;
+            
+            double blur_score = current_angular_vel_.load() * current_imu_dt_.load();
+            bool is_blurred = blur_score > SAM_BLUR_THRESH;
+            
+            int current_features = ids.size();
+            int last_features = last_sam_feature_ids_.size();
+            bool low_tracking_quality = current_features < SAM_MIN_FEATURES;
+            
+            int common_features = 0;
+            if (last_features > 0) {
+                for (int id : ids) {
+                    if (last_sam_feature_ids_.count(id)) {
+                        common_features++;
+                    }
+                }
+            }
+            
+            double overlap_ratio = 1.0;
+            if (last_features > 0 || current_features > 0) {
+                overlap_ratio = (double)common_features / std::max(1, std::min(last_features, current_features));
+            }
+            bool low_overlap = overlap_ratio < SAM_OVERLAP_THRESH;
+            
+            if (force_sam_trigger_.load()) {
+                trigger_sam = true; // Priority 1: Backend kinematic drift
+            } else if (cooldown_passed && !is_blurred) {
+                if (max_idle_exceeded) {
+                    trigger_sam = true; // Priority 2: Max idle fallback
+                } else if (low_tracking_quality || low_overlap) {
+                    trigger_sam = true; // Priority 3: Visual drift / starvation
+                }
+            }
+        }
+
+        if (trigger_sam)
         {
             if (!sam_processing_.load())
             {
-                last_sam_time_ = _cur_time;
                 sam_processing_ = true;
                 sam_invoked_ = 1;
+                
+                if (SAM_MODE == 2) {
+                    sam_pose_sync_needed_ = true; // Notify backend
+                    force_sam_trigger_ = false;   // Reset backend signal
+                    last_sam_feature_ids_.clear();
+                    for(int id : ids) last_sam_feature_ids_.insert(id);
+                }
+                
+                last_sam_time_.store(_cur_time);
                 cv::Mat thread_img = cur_img.clone();
                 if (sam_thread_.joinable())
                 {

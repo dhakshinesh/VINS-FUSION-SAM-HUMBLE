@@ -73,6 +73,15 @@ extern double F_THRESHOLD;
 extern int SHOW_TRACK;
 extern int FLOW_BACK;
 
+extern int SAM_MODE;
+extern double SAM_MIN_COOLDOWN;
+extern double SAM_MAX_IDLE_TIME;
+extern double SAM_OVERLAP_THRESH;
+extern double SAM_TRANS_THRESH;
+extern double SAM_ROT_THRESH;
+extern double SAM_BLUR_THRESH;
+extern int SAM_MIN_FEATURES;
+
 void readParameters(std::string config_file);
 
 enum SIZE_PARAMETERIZATION

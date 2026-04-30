@@ -212,6 +212,11 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     gyrBuf.push(make_pair(t, angularVelocity));
     //printf("input imu with time %f \n", t);
     mBuf.unlock();
+    
+    double dt = 0.0;
+    if (last_imu_t_ > 0) dt = t - last_imu_t_;
+    last_imu_t_ = t;
+    if (dt > 0) featureTracker.updateIMUKinematics(angularVelocity.norm(), dt);
 
     if (solver_flag == NON_LINEAR)
     {
@@ -626,6 +631,20 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         optimization();
         ROS_INFO("solver costs: %f [ms]", t_solve.toc());
         current_optimization_time = t_solve.toc();
+
+        if (SAM_MODE == 2) {
+            if (featureTracker.sam_pose_sync_needed_.exchange(false)) {
+                last_sam_P_ = Ps[frame_count];
+                last_sam_R_ = Rs[frame_count];
+            }
+
+            double trans = (Ps[frame_count] - last_sam_P_).norm();
+            double rot = Eigen::AngleAxisd(Rs[frame_count] * last_sam_R_.inverse()).angle();
+            
+            if (trans > SAM_TRANS_THRESH || rot > SAM_ROT_THRESH) {
+                featureTracker.force_sam_trigger_.store(true);
+            }
+        }
 
         set<int> removeIndex;
         outliersRejection(removeIndex);
