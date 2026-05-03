@@ -216,7 +216,7 @@ void Estimator::inputIMU(double t, const Vector3d &linearAcceleration, const Vec
     double dt = 0.0;
     if (last_imu_t_ > 0) dt = t - last_imu_t_;
     last_imu_t_ = t;
-    if (dt > 0) featureTracker.updateIMUKinematics(angularVelocity.norm(), dt);
+    if (dt > 0) featureTracker.updateIMUKinematics(angularVelocity, dt, latest_cov_trace_.load());
 
     if (solver_flag == NON_LINEAR)
     {
@@ -631,6 +631,12 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         optimization();
         ROS_INFO("solver costs: %f [ms]", t_solve.toc());
         current_optimization_time = t_solve.toc();
+
+        if (pre_integrations[frame_count]) {
+            double cov_trace = pre_integrations[frame_count]->covariance.block<3,3>(0,0).trace();
+            latest_cov_trace_.store(cov_trace);
+            printf("[COV_TRACE] frame_count=%d cov_trace=%.9f\n", frame_count, cov_trace);
+        }
 
         if (SAM_MODE == 2) {
             if (featureTracker.sam_pose_sync_needed_.exchange(false)) {

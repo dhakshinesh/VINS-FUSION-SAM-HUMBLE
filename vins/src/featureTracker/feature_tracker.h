@@ -118,18 +118,23 @@ public:
     
     // Intelligent Trigger variables
     std::set<int> last_sam_feature_ids_;
-    std::atomic<double> current_angular_vel_{0.0};
+    std::atomic<double> current_angular_vel_{0.0};   // norm, used by blur gate
+    std::atomic<double> current_angular_vel_x_{0.0};
+    std::atomic<double> current_angular_vel_y_{0.0};
+    std::atomic<double> current_angular_vel_z_{0.0};
     std::atomic<double> current_imu_dt_{0.0};
+    std::atomic<double> current_imu_cov_trace_{0.0};
     std::atomic<bool> force_sam_trigger_{false};
     std::atomic<bool> sam_pose_sync_needed_{false};
-    
+
     void samThreadMethod(cv::Mat image);
-    void updateIMUKinematics(double angular_vel, double dt);
+    void updateIMUKinematics(const Eigen::Vector3d &angular_vel_vec, double dt, double cov_trace);
 
     std::atomic<int> sam_invoked_{0};
     std::atomic<double> sam_start_time_log_{0.0};
     std::atomic<double> sam_end_time_log_{0.0};
     std::atomic<double> sam_duration_log_{0.0};
+    std::atomic<int> gate_blocked_{0};
 
     map<int, cv::Point2f> cur_un_pts_map, prev_un_pts_map;
     map<int, cv::Point2f> cur_un_right_pts_map, prev_un_right_pts_map;

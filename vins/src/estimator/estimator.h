@@ -11,6 +11,7 @@
  
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include <std_msgs/msg/header.h>
 #include <std_msgs/msg/float32.h>
 #include <ceres/ceres.h>
@@ -118,6 +119,7 @@ class Estimator
     Eigen::Vector3d last_sam_P_{Eigen::Vector3d::Zero()};
     Eigen::Matrix3d last_sam_R_{Eigen::Matrix3d::Identity()};
     double last_imu_t_{-1.0};
+    std::atomic<double> latest_cov_trace_{0.0};
 
     SolverFlag solver_flag;
     MarginalizationFlag  marginalization_flag;

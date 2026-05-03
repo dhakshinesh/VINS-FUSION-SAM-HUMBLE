@@ -61,6 +61,7 @@ double SAM_TRANS_THRESH;
 double SAM_ROT_THRESH;
 double SAM_BLUR_THRESH;
 int SAM_MIN_FEATURES;
+double SAM_COV_THRESH;
 
 
 
@@ -114,6 +115,7 @@ void readParameters(std::string config_file)
     SAM_ROT_THRESH = fsSettings["sam_rot_thresh"].empty() ? 0.78 : (double)fsSettings["sam_rot_thresh"];
     SAM_BLUR_THRESH = fsSettings["sam_blur_thresh"].empty() ? 0.05 : (double)fsSettings["sam_blur_thresh"]; // e.g. 1.5 rad/s * 0.03s
     SAM_MIN_FEATURES = fsSettings["sam_min_features"].empty() ? 20 : (int)fsSettings["sam_min_features"];
+    SAM_COV_THRESH = fsSettings["sam_cov_thresh"].empty() ? 1.0 : (double)fsSettings["sam_cov_thresh"];
 
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
@@ -170,7 +172,7 @@ void readParameters(std::string config_file)
             << "field.twist.twist.angular.x,field.twist.twist.angular.y,field.twist.twist.angular.z,";
     for (int i=0; i<36; i++) foutExt << "field.twist.covariance" << i << ",";
     foutExt << "timestamp,frame_id,frame_processing_time,feature_tracking_time,optimization_time,"
-            << "sam_invoked,sam_start_time,sam_end_time,sam_duration,cpu_usage,gpu_usage,covariance_value\n";
+            << "sam_invoked,sam_start_time,sam_end_time,sam_duration,cpu_usage,gpu_usage,covariance_value,gate_blocked,cov_threshold\n";
     foutExt.close();
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
