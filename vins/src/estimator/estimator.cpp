@@ -633,7 +633,19 @@ void Estimator::processImage(const map<int, vector<pair<int, Eigen::Matrix<doubl
         current_optimization_time = t_solve.toc();
 
         if (pre_integrations[frame_count]) {
-            double cov_trace = pre_integrations[frame_count]->covariance.block<3,3>(0,0).trace();
+            auto& pi = pre_integrations[frame_count];
+            Eigen::Matrix<double,15,1> diag = pi->covariance.diagonal();
+            printf("[COV_DIAG] fc=%d sum_dt=%.4f n_imu=%zu\n",
+                   frame_count, pi->sum_dt, pi->dt_buf.size());
+            printf("[COV_DIAG] dP: %.3e %.3e %.3e\n", diag(0),  diag(1),  diag(2));
+            printf("[COV_DIAG] dR: %.3e %.3e %.3e\n", diag(3),  diag(4),  diag(5));
+            printf("[COV_DIAG] dV: %.3e %.3e %.3e\n", diag(6),  diag(7),  diag(8));
+            printf("[COV_DIAG] Ba: %.3e %.3e %.3e\n", diag(9),  diag(10), diag(11));
+            printf("[COV_DIAG] Bg: %.3e %.3e %.3e\n", diag(12), diag(13), diag(14));
+            // block<3,3>(0,0) = delta-p covariance; its trace is rotation-invariant
+            // (R*R^T=I cancels in V*Q*V^T), so it is constant for fixed dt/IMU-rate.
+            // Use rotation block (rows 3-5) or velocity block (rows 6-8) for motion sensitivity.
+            double cov_trace = pi->covariance.block<3,3>(0,0).trace();
             latest_cov_trace_.store(cov_trace);
             printf("[COV_TRACE] frame_count=%d cov_trace=%.9f\n", frame_count, cov_trace);
         }
