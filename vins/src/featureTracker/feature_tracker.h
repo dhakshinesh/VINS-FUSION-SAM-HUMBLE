@@ -19,6 +19,9 @@
 #include <queue>
 #include <execinfo.h>
 #include <csignal>
+#include <thread>
+#include <mutex>
+#include <atomic>
 #include <opencv2/opencv.hpp>
 #include <eigen3/Eigen/Dense>
 
@@ -53,6 +56,11 @@ class FeatureTracker
 {
 public:
     FeatureTracker();
+    ~FeatureTracker() {
+        if (sam_thread_.joinable()) {
+            sam_thread_.join();
+        }
+    }
     map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
     void setMask();
     void addPoints();
@@ -78,7 +86,7 @@ public:
     vector<cv::Point2f> getTrackedPts();
 
     // SAM Integration
-    void initSAM(bool use_sam, int update_frequency = 5);
+    void initSAM(bool use_sam, double update_interval = 5.0);
     void setSAMClient(std::shared_ptr<SAMClient> client);
     cv::Mat getMask();
 
@@ -99,9 +107,34 @@ public:
     // SAM Integration
     std::shared_ptr<SAMClient> sam_client_;
     bool use_sam_;
-    int sam_update_frequency_;
+    double sam_update_interval_;
     int frame_count_;
     cv::Mat sam_mask;
+    
+    std::mutex sam_mutex_;
+    std::atomic<bool> sam_processing_;
+    std::thread sam_thread_;
+    std::atomic<double> last_sam_time_;
+    
+    // Intelligent Trigger variables
+    std::set<int> last_sam_feature_ids_;
+    std::atomic<double> current_angular_vel_{0.0};   // norm, used by blur gate
+    std::atomic<double> current_angular_vel_x_{0.0};
+    std::atomic<double> current_angular_vel_y_{0.0};
+    std::atomic<double> current_angular_vel_z_{0.0};
+    std::atomic<double> current_imu_dt_{0.0};
+    std::atomic<double> current_imu_cov_trace_{0.0};
+    std::atomic<bool> force_sam_trigger_{false};
+    std::atomic<bool> sam_pose_sync_needed_{false};
+
+    void samThreadMethod(cv::Mat image);
+    void updateIMUKinematics(const Eigen::Vector3d &angular_vel_vec, double dt, double cov_trace);
+
+    std::atomic<int> sam_invoked_{0};
+    std::atomic<double> sam_start_time_log_{0.0};
+    std::atomic<double> sam_end_time_log_{0.0};
+    std::atomic<double> sam_duration_log_{0.0};
+    std::atomic<int> gate_blocked_{0};
 
     map<int, cv::Point2f> cur_un_pts_map, prev_un_pts_map;
     map<int, cv::Point2f> cur_un_right_pts_map, prev_un_right_pts_map;

@@ -50,6 +50,7 @@ extern double SOLVER_TIME;
 extern int NUM_ITERATIONS;
 extern std::string EX_CALIB_RESULT_PATH;
 extern std::string VINS_RESULT_PATH;
+extern std::string VINS_EXTENDED_LOG_PATH;
 extern std::string OUTPUT_FOLDER;
 extern std::string IMU_TOPIC;
 extern double TD;
@@ -71,6 +72,16 @@ extern int MIN_DIST;
 extern double F_THRESHOLD;
 extern int SHOW_TRACK;
 extern int FLOW_BACK;
+
+extern int SAM_MODE;
+extern double SAM_MIN_COOLDOWN;
+extern double SAM_MAX_IDLE_TIME;
+extern double SAM_OVERLAP_THRESH;
+extern double SAM_TRANS_THRESH;
+extern double SAM_ROT_THRESH;
+extern double SAM_BLUR_THRESH;
+extern int SAM_MIN_FEATURES;
+extern double SAM_COV_THRESH;
 
 void readParameters(std::string config_file);
 

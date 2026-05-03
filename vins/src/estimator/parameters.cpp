@@ -8,6 +8,8 @@
  *******************************************************/
 
 #include "parameters.h"
+#include <cstdlib>
+
 
 double INIT_DEPTH;
 double MIN_PARALLAX;
@@ -32,6 +34,7 @@ int ESTIMATE_TD;
 int ROLLING_SHUTTER;
 std::string EX_CALIB_RESULT_PATH;
 std::string VINS_RESULT_PATH;
+std::string VINS_EXTENDED_LOG_PATH;
 std::string OUTPUT_FOLDER;
 std::string IMU_TOPIC;
 int ROW, COL;
@@ -49,6 +52,17 @@ int MIN_DIST;
 double F_THRESHOLD;
 int SHOW_TRACK;
 int FLOW_BACK;
+
+int SAM_MODE;
+double SAM_MIN_COOLDOWN;
+double SAM_MAX_IDLE_TIME;
+double SAM_OVERLAP_THRESH;
+double SAM_TRANS_THRESH;
+double SAM_ROT_THRESH;
+double SAM_BLUR_THRESH;
+int SAM_MIN_FEATURES;
+double SAM_COV_THRESH;
+
 
 
 template <typename T>
@@ -92,6 +106,17 @@ void readParameters(std::string config_file)
     SHOW_TRACK = fsSettings["show_track"];
     FLOW_BACK = fsSettings["flow_back"];
 
+    // Default SAM parameters
+    SAM_MODE = fsSettings["sam_mode"].empty() ? 2 : (int)fsSettings["sam_mode"];
+    SAM_MIN_COOLDOWN = fsSettings["sam_min_cooldown"].empty() ? 2.0 : (double)fsSettings["sam_min_cooldown"];
+    SAM_MAX_IDLE_TIME = fsSettings["sam_max_idle_time"].empty() ? 10.0 : (double)fsSettings["sam_max_idle_time"];
+    SAM_OVERLAP_THRESH = fsSettings["sam_overlap_thresh"].empty() ? 0.5 : (double)fsSettings["sam_overlap_thresh"];
+    SAM_TRANS_THRESH = fsSettings["sam_trans_thresh"].empty() ? 2.0 : (double)fsSettings["sam_trans_thresh"];
+    SAM_ROT_THRESH = fsSettings["sam_rot_thresh"].empty() ? 0.78 : (double)fsSettings["sam_rot_thresh"];
+    SAM_BLUR_THRESH = fsSettings["sam_blur_thresh"].empty() ? 0.05 : (double)fsSettings["sam_blur_thresh"]; // e.g. 1.5 rad/s * 0.03s
+    SAM_MIN_FEATURES = fsSettings["sam_min_features"].empty() ? 20 : (int)fsSettings["sam_min_features"];
+    SAM_COV_THRESH = fsSettings["sam_cov_thresh"].empty() ? 1.0 : (double)fsSettings["sam_cov_thresh"];
+
     MULTIPLE_THREAD = fsSettings["multiple_thread"];
 
     USE_GPU = fsSettings["use_gpu"];
@@ -117,10 +142,38 @@ void readParameters(std::string config_file)
     MIN_PARALLAX = MIN_PARALLAX / FOCAL_LENGTH;
 
     fsSettings["output_path"] >> OUTPUT_FOLDER;
+    
+    if (!OUTPUT_FOLDER.empty() && OUTPUT_FOLDER.front() == '~') {
+        const char* home = std::getenv("HOME");
+        if (home) {
+            OUTPUT_FOLDER.replace(0, 1, home);
+        }
+    }
+    if (!OUTPUT_FOLDER.empty()) {
+        std::string command = "mkdir -p " + OUTPUT_FOLDER;
+        if (system(command.c_str()) != 0) {
+            ROS_WARN("Failed to create output directory.");
+        }
+    }
+
     VINS_RESULT_PATH = OUTPUT_FOLDER + "/vio.csv";
     std::cout << "result path " << VINS_RESULT_PATH << std::endl;
     std::ofstream fout(VINS_RESULT_PATH, std::ios::out);
     fout.close();
+
+    VINS_EXTENDED_LOG_PATH = OUTPUT_FOLDER + "/vio_extended.csv";
+    std::cout << "extended result path " << VINS_EXTENDED_LOG_PATH << std::endl;
+    std::ofstream foutExt(VINS_EXTENDED_LOG_PATH, std::ios::out);
+    foutExt << "%time,field.header.seq,field.header.stamp,field.header.frame_id,field.child_frame_id,"
+            << "field.pose.pose.position.x,field.pose.pose.position.y,field.pose.pose.position.z,"
+            << "field.pose.pose.orientation.x,field.pose.pose.orientation.y,field.pose.pose.orientation.z,field.pose.pose.orientation.w,";
+    for (int i=0; i<36; i++) foutExt << "field.pose.covariance" << i << ",";
+    foutExt << "field.twist.twist.linear.x,field.twist.twist.linear.y,field.twist.twist.linear.z,"
+            << "field.twist.twist.angular.x,field.twist.twist.angular.y,field.twist.twist.angular.z,";
+    for (int i=0; i<36; i++) foutExt << "field.twist.covariance" << i << ",";
+    foutExt << "timestamp,frame_id,frame_processing_time,feature_tracking_time,optimization_time,"
+            << "sam_invoked,sam_start_time,sam_end_time,sam_duration,cpu_usage,gpu_usage,covariance_value,gate_blocked,cov_threshold\n";
+    foutExt.close();
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];
     if (ESTIMATE_EXTRINSIC == 2)

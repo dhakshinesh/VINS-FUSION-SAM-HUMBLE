@@ -180,6 +180,68 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
               << estimator.Vs[WINDOW_SIZE].y() << ","
               << estimator.Vs[WINDOW_SIZE].z() << "," << endl;
         foutC.close();
+        
+        // write extended result to file
+        static int extended_log_seq = 0;
+        ofstream foutExt(VINS_EXTENDED_LOG_PATH, ios::app);
+        
+        foutExt << std::fixed << std::setprecision(9) << (header.stamp.sec + header.stamp.nanosec * 1e-9) << ",";
+        foutExt << extended_log_seq++ << ",";
+        foutExt << std::fixed << std::setprecision(9) << (header.stamp.sec + header.stamp.nanosec * 1e-9) << ",";
+        
+        foutExt << "world," << "world,";
+        
+        foutExt << std::fixed << std::setprecision(5)
+                << estimator.Ps[WINDOW_SIZE].x() << ","
+                << estimator.Ps[WINDOW_SIZE].y() << ","
+                << estimator.Ps[WINDOW_SIZE].z() << ","
+                << tmp_Q.x() << ","
+                << tmp_Q.y() << ","
+                << tmp_Q.z() << ","
+                << tmp_Q.w() << ",";
+        
+        for (int i=0; i<36; i++) foutExt << "0.0,";
+        
+        foutExt << estimator.Vs[WINDOW_SIZE].x() << ","
+                << estimator.Vs[WINDOW_SIZE].y() << ","
+                << estimator.Vs[WINDOW_SIZE].z() << ","
+                << estimator.featureTracker.current_angular_vel_x_.load() << ","
+                << estimator.featureTracker.current_angular_vel_y_.load() << ","
+                << estimator.featureTracker.current_angular_vel_z_.load() << ",";
+
+        for (int i=0; i<36; i++) foutExt << "0.0,";
+
+        foutExt << std::fixed << std::setprecision(9) << (header.stamp.sec + header.stamp.nanosec * 1e-9) << ",";
+        foutExt << "world,";
+        
+        foutExt << std::fixed << std::setprecision(5)
+                << estimator.current_frame_processing_time << ","
+                << estimator.current_feature_tracking_time << ","
+                << estimator.current_optimization_time << ",";
+        
+        int invoked = estimator.featureTracker.sam_invoked_.load();
+        foutExt << invoked << ",";
+        
+        if (invoked) {
+            foutExt << std::fixed << std::setprecision(5)
+                    << estimator.featureTracker.sam_start_time_log_.load() << ","
+                    << estimator.featureTracker.sam_end_time_log_.load() << ","
+                    << estimator.featureTracker.sam_duration_log_.load() << ",";
+        } else {
+            foutExt << "NaN,NaN,NaN,";
+        }
+        
+        foutExt << std::fixed << std::setprecision(2)
+                << Utility::getCpuUsage() << ","
+                << Utility::getGpuUsage() << ","
+                << std::fixed << std::setprecision(9)
+                << estimator.featureTracker.current_imu_cov_trace_.load() << ","
+                << estimator.featureTracker.gate_blocked_.load() << ","
+                << std::fixed << std::setprecision(6)
+                << SAM_COV_THRESH << "\n";
+        
+        foutExt.close();
+
         Eigen::Vector3d tmp_T = estimator.Ps[WINDOW_SIZE];
         printf("time: %f, t: %f %f %f q: %f %f %f %f \n", header.stamp.sec + header.stamp.nanosec * (1e-9),
                                                           tmp_T.x(), tmp_T.y(), tmp_T.z(),
