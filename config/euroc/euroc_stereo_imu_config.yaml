@@ -63,7 +63,7 @@ sam_trans_thresh: 2.0     # Threshold for translational drift (meters)
 sam_rot_thresh: 0.78      # Threshold for rotational drift (radians)
 sam_blur_thresh: 0.05     # Threshold for motion blur (angular_vel * dt)
 sam_min_features: 20      # Threshold for feature starvation (count)
-sam_cov_thresh: 1.0       # Covariance trace threshold for SAM gate (position uncertainty, m^2)
+sam_cov_thresh: 0.3      # Covariance trace threshold for SAM gate (position uncertainty, m^2)
 
 #optimization parameters
 max_solver_time: 0.04  # max solver itration time (ms), to guarantee real time
