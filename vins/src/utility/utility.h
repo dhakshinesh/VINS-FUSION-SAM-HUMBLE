@@ -118,9 +118,6 @@ class Utility
 
     static Eigen::Matrix3d g2R(const Eigen::Vector3d &g);
 
-    static double getCpuUsage();
-    static double getGpuUsage();
-
     template <size_t N>
     struct uint_
     {
