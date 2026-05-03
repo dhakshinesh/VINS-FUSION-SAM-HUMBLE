@@ -11,7 +11,6 @@
  
 #include <thread>
 #include <mutex>
-#include <atomic>
 #include <std_msgs/msg/header.h>
 #include <std_msgs/msg/float32.h>
 #include <ceres/ceres.h>
@@ -56,7 +55,7 @@ class Estimator
     void inputImage(double t, const cv::Mat &_img, const cv::Mat &_img1 = cv::Mat());
 
     // SAM Integration
-    void initSAM(std::shared_ptr<rclcpp::Node> node, bool use_sam, double update_interval = 5.0);
+    void initSAM(std::shared_ptr<rclcpp::Node> node, bool use_sam, int update_frequency = 5);
 
     // internal thread
     void processMeasurements();
@@ -116,10 +115,6 @@ class Estimator
 
     FeatureTracker featureTracker;
     std::shared_ptr<SAMClient> sam_client_;
-    Eigen::Vector3d last_sam_P_{Eigen::Vector3d::Zero()};
-    Eigen::Matrix3d last_sam_R_{Eigen::Matrix3d::Identity()};
-    double last_imu_t_{-1.0};
-    std::atomic<double> latest_cov_trace_{0.0};
 
     SolverFlag solver_flag;
     MarginalizationFlag  marginalization_flag;
@@ -189,10 +184,4 @@ class Estimator
 
     bool initFirstPoseFlag;
     bool initThreadFlag;
-
-    // Extended Logging Timings
-    std::map<double, double> feature_tracking_times_map;
-    double current_optimization_time;
-    double current_frame_processing_time;
-    double current_feature_tracking_time;
 };

@@ -45,7 +45,7 @@ void reduceVector(vector<int> &v, vector<uchar> status)
     v.resize(j);
 }
 
-FeatureTracker::FeatureTracker() : sam_client_(nullptr), use_sam_(false), sam_update_interval_(5.0), frame_count_(0), sam_processing_(false), last_sam_time_(-1.0)
+FeatureTracker::FeatureTracker() : sam_client_(nullptr), use_sam_(false), sam_update_frequency_(5), frame_count_(0)
 {
     stereo_cam = 0;
     n_id = 0;
@@ -93,28 +93,10 @@ cv::Mat FeatureTracker::getMask()
     return mask;
 }
 
-void FeatureTracker::initSAM(bool use_sam, double update_interval)
+void FeatureTracker::initSAM(bool use_sam, int update_frequency)
 {
     use_sam_ = use_sam;
-    sam_update_interval_ = update_interval;
-}
-
-void FeatureTracker::samThreadMethod(cv::Mat image)
-{
-    double start_ros_time = cur_time;
-    sam_start_time_log_ = start_ros_time; // approximate start
-    TicToc t_sam;
-    cv::Mat color_img, new_sam_mask;
-    cv::cvtColor(image, color_img, cv::COLOR_GRAY2BGR);
-    if (sam_client_ != nullptr && sam_client_->getSegmentationMask(color_img, new_sam_mask))
-    {
-        std::lock_guard<std::mutex> lock(sam_mutex_);
-        sam_mask = new_sam_mask.clone();
-    }
-    
-    sam_duration_log_ = t_sam.toc();
-    sam_end_time_log_ = start_ros_time + (sam_duration_log_.load() / 1000.0);
-    sam_processing_ = false;
+    sam_update_frequency_ = update_frequency;
 }
 
 void FeatureTracker::setSAMClient(std::shared_ptr<SAMClient> client)
@@ -140,16 +122,6 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
     return sqrt(dx * dx + dy * dy);
 }
 
-void FeatureTracker::updateIMUKinematics(const Eigen::Vector3d &angular_vel_vec, double dt, double cov_trace)
-{
-    current_angular_vel_.store(angular_vel_vec.norm());
-    current_angular_vel_x_.store(angular_vel_vec.x());
-    current_angular_vel_y_.store(angular_vel_vec.y());
-    current_angular_vel_z_.store(angular_vel_vec.z());
-    current_imu_dt_.store(dt);
-    current_imu_cov_trace_.store(cov_trace);
-}
-
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
 {
     TicToc t_r;
@@ -162,95 +134,12 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
     
     // SAM Segmentation update
     frame_count_++;
-    sam_invoked_ = 0;
-    
-    if (use_sam_ && sam_client_ != nullptr && SAM_MODE > 0)
+    if (use_sam_ && sam_client_ != nullptr && (frame_count_ % sam_update_frequency_ == 0))
     {
-        bool trigger_sam = false;
-        
-        if (SAM_MODE == 1) // Timed Mode
-        {
-            if (last_sam_time_ < 0 || (_cur_time - last_sam_time_.load()) >= SAM_MIN_COOLDOWN)
-            {
-                trigger_sam = true;
-            }
-        }
-        else if (SAM_MODE == 2) // Intelligent Mode
-        {
-            bool cooldown_passed = last_sam_time_ < 0 || (_cur_time - last_sam_time_.load()) > SAM_MIN_COOLDOWN;
-            bool max_idle_exceeded = last_sam_time_ > 0 && (_cur_time - last_sam_time_.load()) > SAM_MAX_IDLE_TIME;
-            
-            double blur_score = current_angular_vel_.load() * current_imu_dt_.load();
-            bool is_blurred = blur_score > SAM_BLUR_THRESH;
-            
-            int current_features = ids.size();
-            int last_features = last_sam_feature_ids_.size();
-            bool low_tracking_quality = current_features < SAM_MIN_FEATURES;
-            
-            int common_features = 0;
-            if (last_features > 0) {
-                for (int id : ids) {
-                    if (last_sam_feature_ids_.count(id)) {
-                        common_features++;
-                    }
-                }
-            }
-            
-            double overlap_ratio = 1.0;
-            if (last_features > 0 || current_features > 0) {
-                overlap_ratio = (double)common_features / std::max(1, std::min(last_features, current_features));
-            }
-            bool low_overlap = overlap_ratio < SAM_OVERLAP_THRESH;
-            
-            if (force_sam_trigger_.load()) {
-                trigger_sam = true; // Priority 1: Backend kinematic drift
-            } else if (cooldown_passed && !is_blurred) {
-                if (max_idle_exceeded) {
-                    trigger_sam = true; // Priority 2: Max idle fallback
-                } else if (low_tracking_quality || low_overlap) {
-                    trigger_sam = true; // Priority 3: Visual drift / starvation
-                }
-            }
-        }
-
-        // Covariance gate: block SAM if position uncertainty is too high
-        if (trigger_sam) {
-            double cov_trace = current_imu_cov_trace_.load();
-            if (cov_trace > SAM_COV_THRESH) {
-                gate_blocked_.store(1);
-                trigger_sam = false;
-                printf("[SAM_GATE] BLOCKED  cov_trace=%.9f threshold=%.6f\n", cov_trace, SAM_COV_THRESH);
-            } else {
-                gate_blocked_.store(0);
-                printf("[SAM_GATE] ALLOWED  cov_trace=%.9f threshold=%.6f\n", cov_trace, SAM_COV_THRESH);
-            }
-        } else {
-            gate_blocked_.store(0);
-        }
-
-        if (trigger_sam)
-        {
-            if (!sam_processing_.load())
-            {
-                sam_processing_ = true;
-                sam_invoked_ = 1;
-                
-                if (SAM_MODE == 2) {
-                    sam_pose_sync_needed_ = true; // Notify backend
-                    force_sam_trigger_ = false;   // Reset backend signal
-                    last_sam_feature_ids_.clear();
-                    for(int id : ids) last_sam_feature_ids_.insert(id);
-                }
-                
-                last_sam_time_.store(_cur_time);
-                cv::Mat thread_img = cur_img.clone();
-                if (sam_thread_.joinable())
-                {
-                    sam_thread_.join();
-                }
-                sam_thread_ = std::thread(&FeatureTracker::samThreadMethod, this, thread_img);
-            }
-        }
+        cv::Mat color_img, new_sam_mask;
+        cv::cvtColor(cur_img, color_img, cv::COLOR_GRAY2BGR);
+        if (sam_client_->getSegmentationMask(color_img, new_sam_mask))
+            sam_mask = new_sam_mask;
     }
 
     cv::Mat rightImg = _img1;
