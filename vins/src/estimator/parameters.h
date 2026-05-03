@@ -81,6 +81,7 @@ extern double SAM_TRANS_THRESH;
 extern double SAM_ROT_THRESH;
 extern double SAM_BLUR_THRESH;
 extern int SAM_MIN_FEATURES;
+extern double SAM_COV_THRESH;
 
 void readParameters(std::string config_file);
 

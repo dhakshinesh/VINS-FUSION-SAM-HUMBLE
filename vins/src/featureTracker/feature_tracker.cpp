@@ -140,10 +140,14 @@ double FeatureTracker::distance(cv::Point2f &pt1, cv::Point2f &pt2)
     return sqrt(dx * dx + dy * dy);
 }
 
-void FeatureTracker::updateIMUKinematics(double angular_vel, double dt)
+void FeatureTracker::updateIMUKinematics(const Eigen::Vector3d &angular_vel_vec, double dt, double cov_trace)
 {
-    current_angular_vel_.store(angular_vel);
+    current_angular_vel_.store(angular_vel_vec.norm());
+    current_angular_vel_x_.store(angular_vel_vec.x());
+    current_angular_vel_y_.store(angular_vel_vec.y());
+    current_angular_vel_z_.store(angular_vel_vec.z());
     current_imu_dt_.store(dt);
+    current_imu_cov_trace_.store(cov_trace);
 }
 
 map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackImage(double _cur_time, const cv::Mat &_img, const cv::Mat &_img1)
@@ -207,6 +211,21 @@ map<int, vector<pair<int, Eigen::Matrix<double, 7, 1>>>> FeatureTracker::trackIm
                     trigger_sam = true; // Priority 3: Visual drift / starvation
                 }
             }
+        }
+
+        // Covariance gate: block SAM if position uncertainty is too high
+        if (trigger_sam) {
+            double cov_trace = current_imu_cov_trace_.load();
+            if (cov_trace > SAM_COV_THRESH) {
+                gate_blocked_.store(1);
+                trigger_sam = false;
+                printf("[SAM_GATE] BLOCKED  cov_trace=%.9f threshold=%.6f\n", cov_trace, SAM_COV_THRESH);
+            } else {
+                gate_blocked_.store(0);
+                printf("[SAM_GATE] ALLOWED  cov_trace=%.9f threshold=%.6f\n", cov_trace, SAM_COV_THRESH);
+            }
+        } else {
+            gate_blocked_.store(0);
         }
 
         if (trigger_sam)

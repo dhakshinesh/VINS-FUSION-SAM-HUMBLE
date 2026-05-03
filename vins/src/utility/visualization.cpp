@@ -205,7 +205,9 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
         foutExt << estimator.Vs[WINDOW_SIZE].x() << ","
                 << estimator.Vs[WINDOW_SIZE].y() << ","
                 << estimator.Vs[WINDOW_SIZE].z() << ","
-                << "0.0,0.0,0.0,"; // angular is 0.0
+                << estimator.featureTracker.current_angular_vel_x_.load() << ","
+                << estimator.featureTracker.current_angular_vel_y_.load() << ","
+                << estimator.featureTracker.current_angular_vel_z_.load() << ",";
 
         for (int i=0; i<36; i++) foutExt << "0.0,";
 
@@ -232,7 +234,11 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
         foutExt << std::fixed << std::setprecision(2)
                 << Utility::getCpuUsage() << ","
                 << Utility::getGpuUsage() << ","
-                << "0.0\n";
+                << std::fixed << std::setprecision(9)
+                << estimator.featureTracker.current_imu_cov_trace_.load() << ","
+                << estimator.featureTracker.gate_blocked_.load() << ","
+                << std::fixed << std::setprecision(6)
+                << SAM_COV_THRESH << "\n";
         
         foutExt.close();
 
