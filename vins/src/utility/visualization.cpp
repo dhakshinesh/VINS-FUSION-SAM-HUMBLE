@@ -238,7 +238,9 @@ void pubOdometry(const Estimator &estimator, const std_msgs::msg::Header &header
                 << estimator.featureTracker.current_imu_cov_trace_.load() << ","
                 << estimator.featureTracker.gate_blocked_.load() << ","
                 << std::fixed << std::setprecision(6)
-                << SAM_COV_THRESH << "\n";
+                << SAM_COV_THRESH << ","
+                << std::fixed << std::setprecision(6)
+                << estimator.featureTracker.mask_iou_.load() << "\n";
         
         foutExt.close();
 

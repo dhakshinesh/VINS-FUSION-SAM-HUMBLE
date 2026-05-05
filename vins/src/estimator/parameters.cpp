@@ -172,7 +172,7 @@ void readParameters(std::string config_file)
             << "field.twist.twist.angular.x,field.twist.twist.angular.y,field.twist.twist.angular.z,";
     for (int i=0; i<36; i++) foutExt << "field.twist.covariance" << i << ",";
     foutExt << "timestamp,frame_id,frame_processing_time,feature_tracking_time,optimization_time,"
-            << "sam_invoked,sam_start_time,sam_end_time,sam_duration,cpu_usage,gpu_usage,covariance_value,gate_blocked,cov_threshold\n";
+            << "sam_invoked,sam_start_time,sam_end_time,sam_duration,cpu_usage,gpu_usage,covariance_value,gate_blocked,cov_threshold,mask_iou\n";
     foutExt.close();
 
     ESTIMATE_EXTRINSIC = fsSettings["estimate_extrinsic"];

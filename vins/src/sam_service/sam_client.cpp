@@ -36,28 +36,31 @@ bool SAMClient::checkServiceAvailability()
     return service_available_;
 }
 
-bool SAMClient::getSegmentationMask(const cv::Mat& image, cv::Mat& mask)
+bool SAMClient::getSegmentationMask(const cv::Mat& image, cv::Mat& mask, int frame_id, int sam_mode, double* mask_iou)
 {
     if (!enabled_ || !checkServiceAvailability())
     {
         return false;
     }
-    
+
     std::lock_guard<std::mutex> lock(mutex_);
-    
+
     try
     {
         auto request = std::make_shared<vins::srv::SAMSegmentation::Request>();
-        
+
         // Convert OpenCV image to ROS message
         cv_bridge::CvImage cv_image;
         cv_image.encoding = "bgr8";
         cv_image.image = image;
         cv_image.toImageMsg(request->image);
-        
+
+        request->frame_id = frame_id;
+        request->sam_mode = sam_mode;
+
         // Call service
         auto result_future = sam_client_->async_send_request(request);
-        
+
         if (rclcpp::spin_until_future_complete(client_node_, result_future, std::chrono::seconds(30)) ==
             rclcpp::FutureReturnCode::SUCCESS)
         {
@@ -70,6 +73,8 @@ bool SAMClient::getSegmentationMask(const cv::Mat& image, cv::Mat& mask)
                 {
                     cv_ptr = cv_bridge::toCvCopy(response->mask, sensor_msgs::image_encodings::MONO8);
                     mask = cv_ptr->image.clone();
+                    if (mask_iou != nullptr)
+                        *mask_iou = response->mask_iou;
                     return true;
                 }
                 catch (cv_bridge::Exception& e)
