@@ -1,9 +1,12 @@
 # Request
 sensor_msgs/Image image
 geometry_msgs/Point[] points  # Optional: point prompts for segmentation
+int32 frame_id
+int32 sam_mode
 
 ---
 
 # Response
 sensor_msgs/Image mask  # Binary mask (255 for segmented regions, 0 otherwise)
 bool success
+float64 mask_iou

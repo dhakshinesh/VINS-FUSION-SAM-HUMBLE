@@ -106,12 +106,14 @@ void FeatureTracker::samThreadMethod(cv::Mat image)
     TicToc t_sam;
     cv::Mat color_img, new_sam_mask;
     cv::cvtColor(image, color_img, cv::COLOR_GRAY2BGR);
-    if (sam_client_ != nullptr && sam_client_->getSegmentationMask(color_img, new_sam_mask))
+    double iou = 0.0;
+    if (sam_client_ != nullptr && sam_client_->getSegmentationMask(color_img, new_sam_mask, frame_count_, SAM_MODE, &iou))
     {
         std::lock_guard<std::mutex> lock(sam_mutex_);
         sam_mask = new_sam_mask.clone();
+        mask_iou_.store(iou);
     }
-    
+
     sam_duration_log_ = t_sam.toc();
     sam_end_time_log_ = start_ros_time + (sam_duration_log_.load() / 1000.0);
     sam_processing_ = false;

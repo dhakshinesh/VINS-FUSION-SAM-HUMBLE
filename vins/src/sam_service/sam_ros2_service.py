@@ -29,11 +29,14 @@ class SAMService(Node):
         self.declare_parameter('sam_checkpoint_path', '/home/dhakshinesh/segment-anything/checkpoints/mobile_sam.pt')
         self.declare_parameter('use_automatic_mask', True)
         self.declare_parameter('device', 'cuda' if torch.cuda.is_available() else 'cpu')
+        self.declare_parameter('mask_output_dir', '/tmp/vins_masks')
 
         self.model_type = self.get_parameter('sam_model_type').value
         self.checkpoint_path = self.get_parameter('sam_checkpoint_path').value
         self.use_automatic_mask = self.get_parameter('use_automatic_mask').value
         self.device = self.get_parameter('device').value
+        self.mask_output_dir = self.get_parameter('mask_output_dir').value
+        self.prev_mask = None
         
         if not self.checkpoint_path:
             self.get_logger().error("SAM checkpoint path not provided! Please set sam_checkpoint_path parameter")
@@ -134,16 +137,36 @@ class SAMService(Node):
             if self.device == 'cuda':
                 torch.cuda.synchronize()
 
+            # Save mask as numpy array
+            sam_mode = request.sam_mode
+            frame_id = request.frame_id
+            subdir = 'masks_timed' if sam_mode == 1 else 'masks_cov'
+            mask_dir = os.path.join(self.mask_output_dir, subdir)
+            os.makedirs(mask_dir, exist_ok=True)
+            np.save(os.path.join(mask_dir, f'mask_{frame_id}.npy'), combined_mask)
+
+            # Compute IoU with previous mask
+            if self.prev_mask is not None:
+                cur_bin = combined_mask > 0
+                prev_bin = self.prev_mask > 0
+                intersection = np.logical_and(cur_bin, prev_bin).sum()
+                union = np.logical_or(cur_bin, prev_bin).sum()
+                mask_iou = float(intersection) / float(union) if union > 0 else 0.0
+            else:
+                mask_iou = 0.0
+            self.prev_mask = combined_mask.copy()
+
             # Convert mask to ROS image message
             mask_msg = self.bridge.cv2_to_imgmsg(combined_mask, encoding="mono8")
-            
+
             # Publish for visualization and log
             self.mask_pub.publish(mask_msg)
-            self.get_logger().info(f"Successfully generated and published segmentation mask!")
-            
+            self.get_logger().info(f"Successfully generated and published segmentation mask! IoU={mask_iou:.4f}")
+
             response.mask = mask_msg
+            response.mask_iou = mask_iou
             response.success = True
-            
+
             return response
             
         except Exception as e:

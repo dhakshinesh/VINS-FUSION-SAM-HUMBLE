@@ -22,7 +22,7 @@ public:
      * @param mask Output binary mask (255 for segmented regions, 0 otherwise)
      * @return true if successful, false otherwise
      */
-    bool getSegmentationMask(const cv::Mat& image, cv::Mat& mask);
+    bool getSegmentationMask(const cv::Mat& image, cv::Mat& mask, int frame_id = 0, int sam_mode = 0, double* mask_iou = nullptr);
     
     /**
      * Get segmentation mask with point prompts
